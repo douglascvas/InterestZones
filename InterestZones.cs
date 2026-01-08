@@ -287,7 +287,7 @@ namespace InterestZones
             List<FractalArea> toBeRemoved = null;
             foreach (var area in openAreas)
             {
-                if (!area.order.open && !area.order.closed)
+                if (!area.order.Open && !area.order.Closed)
                 {
                     area.rectangleEnd = Time(0);
                     area.rectangleEndIndex = Count - 1;
@@ -296,7 +296,7 @@ namespace InterestZones
                 }
 
                 area.order.ProcessPrice(bid, Count - 1);
-                if (area.order.closed)
+                if (area.order.Closed)
                 {
                     if (toBeRemoved == null) toBeRemoved = new List<FractalArea>();
                     toBeRemoved.Add(area);
@@ -324,7 +324,7 @@ namespace InterestZones
             if (closedAreas.Count > 0)
             {
                 int maxRRFound = closedAreas
-                    .Select(z => z.order.totalProfitInt)
+                    .Select(z => z.order.TotalProfitInt)
                     .Where(z => z > 0)
                     .Max(z => z);
 
@@ -342,12 +342,12 @@ namespace InterestZones
             }
 
             var currentSum = SumRRsForMax(MaxRRValue);
-            //  currentSum +=  Math.Min(zone.order.totalProfitInt, (int)zone.order.maxRR);
+            //  currentSum +=  Math.Min(zone.order.TotalProfitInt, (int)zone.order.MaxRR);
 
             bestRR = bestMaxValue;
             bestRRSum = bestSum;
             currentRRSum = currentSum;
-            positiveAreasCount = closedAreas.Count(z => z.order.totalProfit > 0);
+            positiveAreasCount = closedAreas.Count(z => z.order.TotalProfit > 0);
         }
 
         private int SumRRsForMax(double maxRrValue)
@@ -355,11 +355,11 @@ namespace InterestZones
             int currentSum = 0;
             foreach (var area in closedAreas)
             {
-                if (area.order.totalProfitInt > 0 && area.order.totalProfitInt < maxRrValue)
+                if (area.order.TotalProfitInt > 0 && area.order.TotalProfitInt < maxRrValue)
                 {
                     currentSum += 0;
                 }
-                else if (area.order.totalProfitInt >= maxRrValue)
+                else if (area.order.TotalProfitInt >= maxRrValue)
                 {
                     currentSum += (int)maxRrValue;
                 }
@@ -419,15 +419,15 @@ namespace InterestZones
                         fractal = fractal,
                         order = new FakeOrder()
                         {
-                            isBuy = fractal.low,
-                            maxUnrealizedProfit = 0,
-                            totalProfit = 0,
-                            entryPrice = fractal.high ? fractal.value - rectangleHigh : fractal.value + rectangleHigh,
-                            stopLoss = fractal.value + Symbol.TickSize * PivotExtraRoom * (fractal.high ? 1 : -1),
-                            open = false,
-                            closed = false,
-                            maxRR = MaxRRValue,
-                            breakEvenOnProfit = MinRR
+                            IsBuy = fractal.low,
+                            MaxUnrealizedProfit = 0,
+                            TotalProfit = 0,
+                            EntryPrice = fractal.high ? fractal.value - rectangleHigh : fractal.value + rectangleHigh,
+                            StopLoss = fractal.value + Symbol.TickSize * PivotExtraRoom * (fractal.high ? 1 : -1),
+                            Open = false,
+                            Closed = false,
+                            MaxRR = MaxRRValue,
+                            BreakEvenOnProfit = MinRR
                         },
                         structureBroken = true,
                         rectangleTop = fractal.high
@@ -578,7 +578,7 @@ namespace InterestZones
             gr.DrawEllipse(circlePen, centerX - radius, centerY - radius, radius * 2, radius * 2);
 
             // Draw RR text
-            var rawRR = (int)(area.order.closed ? area.order.totalProfit : area.order.maxUnrealizedProfit);
+            var rawRR = (int)(area.order.Closed ? area.order.TotalProfit : area.order.MaxUnrealizedProfit);
             var rr = Math.Min(rawRR, MaxRRValue);
             string rrText = rr + (rawRR > MaxRRValue ? "+" : "");
             SizeF textSize = gr.MeasureString(rrText, font);

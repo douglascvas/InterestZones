@@ -8,6 +8,8 @@
     <AlgoType>Indicator</AlgoType>
     <AssemblyName>InterestZones</AssemblyName>
     <RootNamespace>InterestZones</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Indicators/InterestZones</OutputPath>

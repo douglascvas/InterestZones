@@ -1,8 +1,7 @@
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.csproj.AssemblyReference.cache
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.GeneratedMSBuildEditorConfig.editorconfig
-/mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.AssemblyInfoInputs.cache
-/mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.AssemblyInfo.cs
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.csproj.CoreCompileInputs.cache
+/mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.sourcelink.json
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.dll
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/refint/InterestZones.dll
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/obj/Debug/InterestZones.pdb
@@ -12,9 +11,8 @@
 /mnt/c/Quantower/Settings/Scripts/Indicators/InterestZones/InterestZones.pdb
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.csproj.AssemblyReference.cache
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.GeneratedMSBuildEditorConfig.editorconfig
-C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.AssemblyInfoInputs.cache
-C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.AssemblyInfo.cs
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.csproj.CoreCompileInputs.cache
+C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.sourcelink.json
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.dll
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\refint\InterestZones.dll
 C:\Quantower\Settings\Scripts\Indicators\InterestZones\obj\Debug\InterestZones.pdb

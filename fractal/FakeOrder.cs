@@ -1,55 +1,58 @@
 ﻿using System;
+using InterestZones.Shared;
 
 namespace cAlgo;
 
-public class FakeOrder
+public class FakeOrder : IOrderManager
 {
-    public bool isBuy { get; set; }
-    public bool closed { get; set; }
-    public bool open { get; set; }
-    public int maxPriceIndex { get; set; }
-    public double entryPrice { get; set; }
-    public double stopLoss { get; set; }
-    public double maxUnrealizedProfit { get; set; }
-    public double totalProfit { get; set; }
-    public int totalProfitInt { get; set; }
-    public double breakEvenOnProfit { get; set; }
-    public double maxRR { get; set; }
+    public bool IsBuy { get; set; }
+    public bool Closed { get; set; }
+    public bool Open { get; set; }
+    public int MaxPriceIndex { get; set; }
+    public double EntryPrice { get; set; }
+    public double StopLoss { get; set; }
+    public double MaxUnrealizedProfit { get; set; }
+    public double TotalProfit { get; set; }
+    public int TotalProfitInt { get; set; }
+    public double BreakEvenOnProfit { get; set; }
+    public double MaxRR { get; set; }
+
+    // IOrderManager implementation
 
     public void ProcessPrice(double price, int index)
     {
-        if(closed) return;
-        var isSell = !isBuy;
+        if(Closed) return;
+        var isSell = !IsBuy;
 
-        open = !closed && (open || (isBuy && price <= entryPrice) || (isSell && price >= entryPrice));
-        if(!open) return;
+        Open = !Closed && (Open || (IsBuy && price <= EntryPrice) || (isSell && price >= EntryPrice));
+        if(!Open) return;
         
-        double risk = Math.Abs(entryPrice - stopLoss);
-        var currentRr = Math.Abs(price - entryPrice) / risk;
-        if ((isBuy && price < entryPrice) || (isSell && price > entryPrice))
+        double risk = Math.Abs(EntryPrice - StopLoss);
+        var currentRr = Math.Abs(price - EntryPrice) / risk;
+        if ((IsBuy && price < EntryPrice) || (isSell && price > EntryPrice))
             currentRr = -currentRr;
         
-        if (currentRr > maxUnrealizedProfit)
+        if (currentRr > MaxUnrealizedProfit)
         {
-            maxUnrealizedProfit = currentRr;
-            maxPriceIndex = index;
+            MaxUnrealizedProfit = currentRr;
+            MaxPriceIndex = index;
         }
         
-        if ((isBuy && price <= stopLoss) || (isSell && price >= stopLoss))
+        if ((IsBuy && price <= StopLoss) || (isSell && price >= StopLoss))
         {
-            if (maxUnrealizedProfit > breakEvenOnProfit)
+            if (MaxUnrealizedProfit > BreakEvenOnProfit)
             {
-                totalProfit = Math.Max(0, maxUnrealizedProfit);
-                totalProfitInt = (int)Math.Floor(Math.Max(0, maxUnrealizedProfit));
+                TotalProfit = Math.Max(0, MaxUnrealizedProfit);
+                TotalProfitInt = (int)Math.Floor(Math.Max(0, MaxUnrealizedProfit));
             }
             else
             {
-                totalProfit = -1;
-                totalProfitInt = -1;
+                TotalProfit = -1;
+                TotalProfitInt = -1;
             }
 
-            closed = true;
-            open = false;
+            Closed = true;
+            Open = false;
         }
 
     }
