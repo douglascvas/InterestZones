@@ -1,5 +1,16 @@
-﻿# Build artifacts
+# Build artifacts
 bin/
 obj/
-.vs
-.idea
+*.dll
+*.pdb
+*.exe
+*.deps.json
+
+# IDE and editor folders
+.vs/
+.idea/
+*.user
+*.DotSettings.user
+
+# Visual Studio Code
+.vscode/
