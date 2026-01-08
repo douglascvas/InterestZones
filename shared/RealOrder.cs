@@ -6,7 +6,7 @@ namespace InterestZones.Shared
     /// <summary>
     /// Manages a real trading order with the same interface as FakeOrder
     /// </summary>
-    public class RealOrderManager : IOrderManager
+    public class RealOrder : IOrder
     {
         private readonly Symbol symbol;
         private readonly Account account;
@@ -29,7 +29,7 @@ namespace InterestZones.Shared
 
         public Position Position => position;
 
-        public RealOrderManager(
+        public RealOrder(
             Symbol symbol,
             Account account,
             bool isBuy,

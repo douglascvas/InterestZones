@@ -1,4 +1,4 @@
-﻿namespace cAlgo
+﻿namespace InterestZones
 {
     public enum FractalType
     {

@@ -3,7 +3,7 @@ namespace InterestZones.Shared
     /// <summary>
     /// Interface for order management - can be implemented by FakeOrder or real order wrapper
     /// </summary>
-    public interface IOrderManager
+    public interface IOrder
     {
         bool IsBuy { get; }
         bool Closed { get; }

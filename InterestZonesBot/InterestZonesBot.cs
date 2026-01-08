@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using cAlgo;
+using InterestZones;
 using InterestZones.Shared;
 using TradingPlatform.BusinessLayer;
+using IOrder = InterestZones.Shared.IOrder;
 
 namespace InterestZonesBot
 {
@@ -11,66 +13,103 @@ namespace InterestZonesBot
     /// InterestZonesBot - Automated trading strategy based on Break of Structure and interest zones
     /// Places real limit orders at detected zones with automatic break-even stop loss management
     /// </summary>
-    public class InterestZonesBot : Strategy
+    public class InterestZonesBot : Strategy, Bot, OrderCreator
     {
         #region Parameters
 
-        [InputParameter("Symbol", 10)]
+        [InputParameter("Symbol", 1)]
         public Symbol symbol;
 
-        [InputParameter("Account", 20)]
+        [InputParameter("Account", 1)]
         public Account account;
+        
+        [InputParameter("Order Quantity", 1, 0.01, 1000, 0.01)]
+        public double OrderQuantity = 1.0;
 
-        [InputParameter("Pivot Period", 30, 1, 100, 1, 0)]
+        [InputParameter("Max Open Orders", 1, 1, 10, 1)]
+        public int MaxOpenOrders = 3;
+
+        [InputParameter("History Period", 1)]
+        public Period HistoryPeriod = Period.MIN15;
+
+        [InputParameter("Lookback Bars", 1, 10, 5000, 10)]
+        public int LookbackBars = 500;
+
+        [InputParameter("Pivot Period", 1, 1, 100, 1, 0)]
         public int PivotPeriod = 10;
 
-        [InputParameter("Rectangle Height Mode", 40, variants: new object[]
+        [InputParameter("Rectangle Height Mode", 2, variants: new object[]
         {
             "Auto (Wick or Average)", RectHeightMode.Auto,
             "Average Only", RectHeightMode.AverageOnly
         })]
         public RectHeightMode RectangleHeightMode = RectHeightMode.Auto;
 
-        [InputParameter("Move to break even on RR", 50, 0, 10, 1, 0)]
+        [InputParameter("Move to break even on RR", 3, 0, 10, 1, 0)]
         public int MinRR = 1;
 
-        [InputParameter("Max RR Value", 60, 1, 50, 1)]
+        [InputParameter("Max RR Value", 4, 1, 50, 1)]
         public double MaxRRValue = 5;
 
-        [InputParameter("Period for Average Bar Size calculation", 70, 1, 50, 1, 0)]
+        [InputParameter("Period for Average Bar Size calculation", 5, 1, 50, 1, 0)]
         public int BarSizeAveragePeriod = 10;
 
-        [InputParameter("Average Bar Size multiplier", 80, 0.1, 50, 0.1)]
+        [InputParameter("Average Bar Size multiplier", 6, 0.1, 50, 0.1)]
         public double BarSizeMultiplier = 0.8;
 
-        [InputParameter("Pivot extra room", 90, 0, 5000, 1)]
+        [InputParameter("Pivot extra room", 6, 0, 5000, 1)]
         public int PivotExtraRoom = 0;
 
-        [InputParameter("Order Quantity", 100, 0.01, 1000, 0.01)]
-        public double OrderQuantity = 1.0;
+        // STYLES
 
-        [InputParameter("Max Open Orders", 110, 1, 10, 1)]
-        public int MaxOpenOrders = 3;
+        [InputParameter("BOS Line Color", 60)] public Color BOSLineColor = Color.Yellow;
 
-        [InputParameter("History Period", 120)]
-        public Period HistoryPeriod = Period.MIN15;
+        [InputParameter("BOS Line Width", 7, 1, 5, 1, 0)]
+        public int BOSLineWidth = 1;
 
-        [InputParameter("Lookback Bars", 130, 10, 5000, 10)]
-        public int LookbackBars = 500;
+        [InputParameter("BOS Line Style", 8, variants: new object[]
+        {
+            "Solid", LineStyleType.Solid,
+            "Dash", LineStyleType.Dash,
+            "Dot", LineStyleType.Dot
+        })]
+        public LineStyleType BOSLineStyle = LineStyleType.Solid;
+
+        [InputParameter("Fractal Line Color", 9)]
+        public Color FractalLineColor = Color.White;
+
+        [InputParameter("Fractal Line Width", 10, 1, 5, 1, 0)]
+        public int FractalLineWidth = 1;
+
+        [InputParameter("Fractal Line Style", 11, variants: new object[]
+        {
+            "Solid", LineStyleType.Solid,
+            "Dash", LineStyleType.Dash,
+            "Dot", LineStyleType.Dot
+        })]
+        public LineStyleType FractalLineStyle = LineStyleType.Dash;
+
+        [InputParameter("InterestArea Border Color", 12)]
+        public Color RectBorderColor = Color.Cyan;
+
+        [InputParameter("InterestArea Fill Color", 13)]
+        public Color RectFillColor = Color.FromArgb(50, 0, 255, 255);
+
+        [InputParameter("Rectangle Border Width", 14, 1, 5, 1, 0)]
+        public int RectBorderWidth = 1;
+
+        [InputParameter("RR Circle Color", 15)]
+        public Color RRCircleColor = Color.White;
+
+        [InputParameter("RR Text Color", 16)] public Color RRTextColor = Color.Black;
 
         #endregion
 
         #region Fields
 
         private HistoricalData historicalData;
-        private List<Bar> bars = new List<Bar>();
-        private List<FractalArea> closedAreas = new List<FractalArea>();
-        private List<FractalArea> openAreas = new List<FractalArea>();
-        private List<Fractal> unbrokenFractals = new List<Fractal>();
-        private FractalService fractalService;
-        private double lastBid;
-        private Fractal lastFractal;
-        private int lastProcessedBar = -1;
+        InterestZoneRenderingIndicator renderer;
+        InterestsZoneManager interestsZoneManager;
 
         #endregion
 
@@ -122,18 +161,40 @@ namespace InterestZonesBot
             historicalData.HistoryItemUpdated += OnHistoryItemUpdated;
 
             // Initialize fractal service
-            fractalService = new FractalService(HistoryPeriod.ToString(), bars, new FractalOptions()
-            {
-                linkHighLow = true,
-                period = PivotPeriod
-            });
 
-            fractalService.onFractal += HandleFractal;
+            renderer = new InterestZoneRenderingIndicator();
+            
 
             // Load initial historical data
             LoadHistoricalData();
 
             Log($"InterestZonesBot started on {symbol.Name} with period {HistoryPeriod}", StrategyLoggingLevel.Trading);
+            
+            interestsZoneManager.PivotPeriod = PivotPeriod;
+            interestsZoneManager.RectangleHeightMode = RectangleHeightMode;
+            interestsZoneManager.MinRR = MinRR;
+            interestsZoneManager.MaxRRValue = MaxRRValue;
+            interestsZoneManager.BarSizeAveragePeriod = BarSizeAveragePeriod;
+            interestsZoneManager.BarSizeMultiplier = BarSizeMultiplier;
+            interestsZoneManager.PivotExtraRoom = PivotExtraRoom;
+            interestsZoneManager.BOSLineColor = BOSLineColor;
+            interestsZoneManager.BOSLineWidth = BOSLineWidth;
+            interestsZoneManager.BOSLineStyle = BOSLineStyle;
+            interestsZoneManager.FractalLineColor = FractalLineColor;
+            interestsZoneManager.FractalLineWidth = FractalLineWidth;
+            interestsZoneManager.FractalLineStyle = FractalLineStyle;
+            interestsZoneManager.RectBorderColor = RectBorderColor;
+            interestsZoneManager.RectFillColor = RectFillColor;
+            interestsZoneManager.RectBorderWidth = RectBorderWidth;
+            interestsZoneManager.RRCircleColor = RRCircleColor;
+            interestsZoneManager.RRTextColor = RRTextColor;
+            interestsZoneManager.OnInit(HistoryPeriod, this);
+            
+            InterestZoneRenderingIndicator interestZoneRenderingIndicator = new InterestZoneRenderingIndicator();
+            interestZoneRenderingIndicator.manager = interestsZoneManager;
+            
+            // Core.Instance.Indicators.BuiltIn.CreateIndicator()
+            // AddIndicator(interestZoneRenderingIndicator);
         }
 
         protected override void OnStop()
@@ -152,271 +213,74 @@ namespace InterestZonesBot
 
             Log("InterestZonesBot stopped", StrategyLoggingLevel.Trading);
         }
+        
+        private void SymbolOnNewQuote(Symbol symbol, Quote quote)
+        {
+            var bid = quote.Bid;
+            interestsZoneManager.HandleBid(bid, symbol, interestsZoneManager.bars.Count, interestsZoneManager.bars[interestsZoneManager.bars.Count - 1].OpenTime);
+        }
 
         protected override void OnRemove()
         {
             this.symbol = null;
             this.account = null;
-            bars.Clear();
-            openAreas.Clear();
-            closedAreas.Clear();
-            unbrokenFractals.Clear();
-        }
-
-        protected override List<StrategyMetric> OnGetMetrics()
-        {
-            List<StrategyMetric> result = base.OnGetMetrics();
-
-            result.Add("Open areas", openAreas.Count.ToString());
-            result.Add("Closed areas", closedAreas.Count.ToString());
-            result.Add("Active positions", openAreas.Count(a => a.order.Open).ToString());
-
-            return result;
+            interestsZoneManager.Cleanup();
         }
 
         private void LoadHistoricalData()
         {
-            bars.Clear();
-            unbrokenFractals.Clear();
 
             int startIndex = Math.Max(0, historicalData.Count - LookbackBars);
 
             for (int i = startIndex; i < historicalData.Count; i++)
             {
-                Bar bar = GetBarFromHistory(i);
-                bars.Add(bar);
+                Bar bar = GetBar(i);
+                interestsZoneManager.bars.Add(bar);
 
-                if (bars.Count > PivotPeriod * 2 + 1)
+                if (interestsZoneManager.bars.Count > PivotPeriod * 2 + 1)
                 {
-                    fractalService.processIndex(bars.Count - 2);
+                    interestsZoneManager.fractalService.processIndex(interestsZoneManager.bars.Count - 2);
                 }
             }
 
-            lastProcessedBar = historicalData.Count - 1;
-            lastBid = symbol.Bid;
-
-            Log($"Loaded {bars.Count} historical bars", StrategyLoggingLevel.Trading);
+            // Log($"Loaded {bars.Count} historical bars", StrategyLoggingLevel.Trading);
         }
 
         private void OnNewHistoryItem(object sender, HistoryEventArgs e)
         {
-            Bar bar = GetBarFromHistory(historicalData.Count - 1);
-            bars.Add(bar);
-
-            if (bars.Count > PivotPeriod * 2 + 1)
-            {
-                fractalService.processIndex(bars.Count - 2);
-
-                // Process bar price movements
-                var previousBar = bars[bars.Count - 2];
-                if (previousBar.bullish)
-                {
-                    if (bar.bullish)
-                    {
-                        HandleBid(bar.Low);
-                        HandleBid(bar.High);
-                    }
-                    else
-                    {
-                        HandleBid(bar.High);
-                        HandleBid(bar.Low);
-                    }
-                }
-                else
-                {
-                    if (bar.bullish)
-                    {
-                        HandleBid(bar.Low);
-                        HandleBid(bar.High);
-                    }
-                    else
-                    {
-                        HandleBid(bar.High);
-                        HandleBid(bar.Low);
-                    }
-                }
-            }
-
-            lastProcessedBar = historicalData.Count - 1;
+            Bar bar = GetBar(historicalData.Count - 1);
+            interestsZoneManager.bars.Add(bar);
+            interestsZoneManager.OnUpdate(UpdateReason.HistoricalBar,interestsZoneManager.bars.Count, symbol, 
+                historicalData[historicalData.Count - 1].TimeLeft, GetBar(interestsZoneManager.bars.Count - 1));
         }
 
         private void OnHistoryItemUpdated(object sender, HistoryEventArgs e)
         {
-            if (bars.Count > 0)
+            if (interestsZoneManager.bars.Count > 0)
             {
-                bars[bars.Count - 1] = GetBarFromHistory(historicalData.Count - 1);
+                interestsZoneManager.bars[interestsZoneManager.bars.Count - 1] = GetBar(historicalData.Count - 1);
             }
         }
 
-        private void SymbolOnNewQuote(Symbol symbol, Quote quote)
+        public IOrder CreateOrder(Fractal fractal, Symbol symbol, double rectangleHigh)
         {
-            var bid = quote.Bid;
-            HandleBid(bid);
-            lastBid = bid;
+            var order = new RealOrder(
+                symbol,
+                account,
+                isBuy: fractal.low,
+                entryPrice: fractal.high ? fractal.value - rectangleHigh : fractal.value + rectangleHigh,
+                stopLoss: fractal.value + symbol.TickSize * PivotExtraRoom * (fractal.high ? 1 : -1),
+                breakEvenOnProfit: MinRR,
+                maxRR: MaxRRValue,
+                log: (msg) => Log(msg, StrategyLoggingLevel.Trading)
+            );
 
-            // Update all open orders
-            foreach (var area in openAreas.ToList())
-            {
-                area.order.ProcessPrice(bid, bars.Count - 1);
-            }
+            // Place the limit order
+            order.PlaceLimitOrder(OrderQuantity);
+            return order;
         }
 
-        private void HandleFractal(FractalEvent e)
-        {
-            lastFractal = e.fractal;
-            var last = unbrokenFractals.LastOrDefault();
-            if (last == null || last.getId() != e.fractal.getId())
-                unbrokenFractals.Add(e.fractal);
-            else if (last.getId() == e.fractal.getId())
-                unbrokenFractals[^1] = e.fractal;
-        }
-
-        private void HandleBid(double bid)
-        {
-            CheckForStructureBreak(bid);
-            HandleOpenAreas(bid);
-        }
-
-        private void HandleOpenAreas(double bid)
-        {
-            List<FractalArea> toBeRemoved = null;
-            foreach (var area in openAreas)
-            {
-                area.order.ProcessPrice(bid, bars.Count - 1);
-                if (area.order.Closed)
-                {
-                    if (toBeRemoved == null) toBeRemoved = new List<FractalArea>();
-                    toBeRemoved.Add(area);
-                }
-            }
-
-            if (toBeRemoved != null)
-            {
-                foreach (var area in toBeRemoved)
-                {
-                    openAreas.Remove(area);
-                    closedAreas.Add(area);
-                }
-            }
-        }
-
-        private void CheckForStructureBreak(double bid)
-        {
-            List<Fractal> toBeRemoved = null;
-            for (int f = 0; f < unbrokenFractals.Count - 1; f++)
-            {
-                Fractal fractalN = unbrokenFractals[f];
-
-                if ((fractalN.high && bid > fractalN.value) || (fractalN.low && bid < fractalN.value))
-                {
-                    if (toBeRemoved == null)
-                        toBeRemoved = new List<Fractal>();
-                    toBeRemoved.Add(fractalN);
-
-                    // Structure broken - create interest zone
-                    var fractal = fractalN.getNext(true);
-                    if (fractal == null) return;
-
-                    var averageBarSize = GetAverageBarSize(fractal) * BarSizeMultiplier;
-                    var fractalBar = bars[fractal.index];
-                    var wickSize = fractal.high
-                        ? fractalBar.upperWickTop - fractalBar.upperWickBottom
-                        : fractalBar.lowerWickTop - fractalBar.lowerWickBottom;
-                    var rectangleHigh = RectangleHeightMode == RectHeightMode.AverageOnly
-                        ? averageBarSize
-                        : Math.Min(wickSize, averageBarSize);
-                    if (RectangleHeightMode == RectHeightMode.Auto && rectangleHigh < 0.4 * averageBarSize)
-                    {
-                        rectangleHigh = averageBarSize;
-                    }
-
-                    if (!IsFractalValid(fractal, 0))
-                        continue;
-
-                    // Check if we can open more orders
-                    int activeOrders = openAreas.Count(a => a.order.Open || !a.order.Closed);
-                    if (activeOrders >= MaxOpenOrders)
-                    {
-                        Log($"Max open orders ({MaxOpenOrders}) reached, skipping zone", StrategyLoggingLevel.Trading);
-                        continue;
-                    }
-
-                    double entryPrice = fractal.high ? fractal.value - rectangleHigh : fractal.value + rectangleHigh;
-                    double stopLoss = fractal.value + symbol.TickSize * PivotExtraRoom * (fractal.high ? 1 : -1);
-
-                    // Create real order manager
-                    var orderManager = new RealOrderManager(
-                        symbol,
-                        account,
-                        isBuy: fractal.low,
-                        entryPrice: entryPrice,
-                        stopLoss: stopLoss,
-                        breakEvenOnProfit: MinRR,
-                        maxRR: MaxRRValue,
-                        log: (msg) => Log(msg, StrategyLoggingLevel.Trading)
-                    );
-
-                    // Place the limit order
-                    orderManager.PlaceLimitOrder(OrderQuantity);
-
-                    var area = new FractalArea
-                    {
-                        fractal = fractal,
-                        order = orderManager,
-                        structureBroken = true,
-                        rectangleTop = fractal.high
-                            ? fractal.value + symbol.TickSize * PivotExtraRoom
-                            : fractal.value + rectangleHigh,
-                        rectangleBottom = fractal.low
-                            ? fractal.value - symbol.TickSize * PivotExtraRoom
-                            : fractal.value - rectangleHigh,
-                        rectangleStart = fractal.dateTime,
-                        rectangleStartIndex = fractal.index,
-                        rectangleEnd = DateTime.UtcNow,
-                        rectangleEndIndex = bars.Count - 1
-                    };
-
-                    openAreas.Add(area);
-
-                    Log($"Interest zone created: {(fractal.low ? "BUY" : "SELL")} @ {entryPrice:F5}, SL: {stopLoss:F5}",
-                        StrategyLoggingLevel.Trading);
-                }
-            }
-
-            if (toBeRemoved != null)
-                foreach (var fractal in toBeRemoved)
-                    unbrokenFractals.Remove(fractal);
-        }
-
-        private bool IsFractalValid(Fractal fractalN, double height)
-        {
-            for (int i = fractalN.index + 1; i < bars.Count - 1; i++)
-            {
-                var bar = bars[i];
-                if ((fractalN.high && bar.High > fractalN.value - height) ||
-                    (fractalN.low && bar.Low < fractalN.value + height))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private double GetAverageBarSize(Fractal fractal)
-        {
-            var n = Math.Max(BarSizeAveragePeriod, 3);
-            var half = n / 2;
-            var start = Math.Max(0, fractal.index + half - n);
-            var max = Math.Min(bars.Count, start + n);
-            var barSizeSum = 0.0;
-            for (int i = start; i < max; i++)
-            {
-                barSizeSum += bars[i].High - bars[i].Low;
-            }
-
-            return barSizeSum / n;
-        }
-
-        private Bar GetBarFromHistory(int index)
+        public Bar GetBar(int index)
         {
             return new Bar()
             {
@@ -428,5 +292,6 @@ namespace InterestZonesBot
                 OpenTime = historicalData[index, SeekOriginHistory.Begin].TimeLeft,
             };
         }
+
     }
 }

@@ -14,9 +14,4 @@ namespace InterestZones.Shared
         public int PivotExtraRoom { get; set; } = 0;
     }
 
-    public enum RectHeightMode
-    {
-        Auto,
-        AverageOnly
-    }
 }

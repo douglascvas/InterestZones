@@ -1,7 +1,7 @@
 ﻿using System;
 using TradingPlatform.BusinessLayer;
 
-namespace cAlgo;
+namespace InterestZones;
 
 public class Bar
 {

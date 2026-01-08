@@ -1,7 +1,7 @@
 ﻿using System;
 using InterestZones.Shared;
 
-namespace cAlgo;
+namespace InterestZones;
 
 public class FractalArea
 {
@@ -13,7 +13,7 @@ public class FractalArea
     public int rectangleStartIndex { get; set; }
     public DateTime rectangleEnd { get; set; }
     public int rectangleEndIndex { get; set; }
-    public IOrderManager order { get; set; }
+    public IOrder order { get; set; }
 
     public bool mitigated => order.Open || order.Closed;
 }

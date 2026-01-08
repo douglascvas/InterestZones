@@ -1,9 +1,9 @@
 ﻿using System;
 using InterestZones.Shared;
 
-namespace cAlgo;
+namespace InterestZones;
 
-public class FakeOrder : IOrderManager
+public class FakeOrder : IOrder
 {
     public bool IsBuy { get; set; }
     public bool Closed { get; set; }
