@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="InterestZones.csproj" />
+  <Project Path="InterestZonesBot/InterestZonesBot.csproj" Id="667c6f35-0aa0-4b34-a9a2-2c46a8d0822e" />
+</Solution>
