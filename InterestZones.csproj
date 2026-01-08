@@ -36,13 +36,5 @@
   <ItemGroup>
     <Content Include=".gitignore" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="BosEvent.cs" />
-    <Compile Include="Bot.cs" />
-    <Compile Include="OrderCreator.cs" />
-    <Compile Include="InterestsZoneManager.cs" />
-    <Compile Include="InterestZoneRenderingIndicator.cs" />
-    <Compile Include="LineStyleType.cs" />
-    <Compile Include="RectHeightMode.cs" />
-  </ItemGroup>
+  <!-- Use SDK default compile items -->
 </Project>
