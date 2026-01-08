@@ -9,19 +9,32 @@
     <AssemblyName>InterestZonesBot</AssemblyName>
     <RootNamespace>InterestZonesBot</RootNamespace>
     <StartAction>Program</StartAction>
-    <StartProgram>C:\Quantower\TradingPlatform\v1.145.13\Console.StarterNew.exe</StartProgram>
-    <StartArguments>--address 127.0.0.1 --port 64372</StartArguments>
+    <StartProgram>../../../../../TradingPlatform/v1.145.13/Console.StarterNew.exe</StartProgram>
+    <StartArguments>--address 127.0.0.1 --port 60143</StartArguments>
+    <!-- Prevent Visual Studio from converting relative paths to absolute paths -->
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+    <UseCommonOutputDirectory>true</UseCommonOutputDirectory>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>C:\Quantower\TradingPlatform\v1.145.13\..\..\Settings\Scripts\Strategies\InterestZonesBot</OutputPath>
+    <OutputPath>../../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Strategies/InterestZonesBot</OutputPath>
+    <Optimize>false</Optimize>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>C:\Quantower\TradingPlatform\v1.145.13\..\..\Settings\Scripts\Strategies\InterestZonesBot</OutputPath>
+    <OutputPath>../../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Strategies/InterestZonesBot</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="TradingPlatform.BusinessLayer">
-      <HintPath>C:\Quantower\TradingPlatform\v1.145.13\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <HintPath>../../../../../TradingPlatform/v1.145.13/bin/TradingPlatform.BusinessLayer.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Link shared code from parent project -->
+    <Compile Include="..\fractal\*.cs" Link="fractal\%(Filename)%(Extension)" />
+    <Compile Include="..\shared\*.cs" Link="shared\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

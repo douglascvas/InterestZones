@@ -5,7 +5,8 @@
       "WebFetch(domain:help.quantower.com)",
       "WebFetch(domain:api.quantower.com)",
       "Bash(dotnet build:*)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

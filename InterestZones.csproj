@@ -10,17 +10,18 @@
     <RootNamespace>InterestZones</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <!-- Prevent Visual Studio from converting relative paths to absolute paths -->
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+    <UseCommonOutputDirectory>true</UseCommonOutputDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Indicators/InterestZones</OutputPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Indicators/InterestZones</OutputPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <Optimize>false</Optimize>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>portable</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>../../../../TradingPlatform/v1.145.13/../../Settings/Scripts/Indicators/InterestZones</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="TradingPlatform.BusinessLayer">
