@@ -17,20 +17,17 @@ namespace InterestZonesBot
     {
         #region Parameters
 
-        [InputParameter("Symbol", 1)]
-        public Symbol symbol;
+        [InputParameter("Symbol", 1)] public Symbol symbol;
 
-        [InputParameter("Account", 1)]
-        public Account account;
-        
+        [InputParameter("Account", 1)] public Account account;
+
         [InputParameter("Order Quantity", 1, 0.01, 1000, 0.01)]
         public double OrderQuantity = 1.0;
 
         [InputParameter("Max Open Orders", 1, 1, 10, 1)]
         public int MaxOpenOrders = 3;
 
-        [InputParameter("History Period", 1)]
-        public Period HistoryPeriod = Period.MIN15;
+        [InputParameter("History Period", 1)] public Period HistoryPeriod = Period.MIN15;
 
         [InputParameter("Lookback Bars", 1, 10, 5000, 10)]
         public int LookbackBars = 500;
@@ -108,7 +105,6 @@ namespace InterestZonesBot
         #region Fields
 
         private HistoricalData historicalData;
-        InterestZoneRenderingIndicator renderer;
         InterestsZoneManager interestsZoneManager;
 
         #endregion
@@ -129,9 +125,12 @@ namespace InterestZonesBot
 
         protected override void OnRun()
         {
+            // Core.Instance.
             if (symbol == null || account == null || symbol.ConnectionId != account.ConnectionId)
             {
-                Log("Incorrect input parameters... Symbol or Account are not specified or they have different connectionID.", StrategyLoggingLevel.Error);
+                Log(
+                    "Incorrect input parameters... Symbol or Account are not specified or they have different connectionID.",
+                    StrategyLoggingLevel.Error);
                 Stop();
                 return;
             }
@@ -146,7 +145,8 @@ namespace InterestZonesBot
             }
 
             // Initialize historical data
-            historicalData = this.symbol.GetHistory(HistoryPeriod, this.symbol.HistoryType, DateTime.UtcNow.AddDays(-90));
+            historicalData =
+                this.symbol.GetHistory(HistoryPeriod, this.symbol.HistoryType, DateTime.UtcNow.AddDays(-90));
 
             if (historicalData == null)
             {
@@ -162,14 +162,11 @@ namespace InterestZonesBot
 
             // Initialize fractal service
 
-            renderer = new InterestZoneRenderingIndicator();
-            
-
             // Load initial historical data
             LoadHistoricalData();
 
             Log($"InterestZonesBot started on {symbol.Name} with period {HistoryPeriod}", StrategyLoggingLevel.Trading);
-            
+
             interestsZoneManager.PivotPeriod = PivotPeriod;
             interestsZoneManager.RectangleHeightMode = RectangleHeightMode;
             interestsZoneManager.MinRR = MinRR;
@@ -177,22 +174,8 @@ namespace InterestZonesBot
             interestsZoneManager.BarSizeAveragePeriod = BarSizeAveragePeriod;
             interestsZoneManager.BarSizeMultiplier = BarSizeMultiplier;
             interestsZoneManager.PivotExtraRoom = PivotExtraRoom;
-            interestsZoneManager.BOSLineColor = BOSLineColor;
-            interestsZoneManager.BOSLineWidth = BOSLineWidth;
-            interestsZoneManager.BOSLineStyle = BOSLineStyle;
-            interestsZoneManager.FractalLineColor = FractalLineColor;
-            interestsZoneManager.FractalLineWidth = FractalLineWidth;
-            interestsZoneManager.FractalLineStyle = FractalLineStyle;
-            interestsZoneManager.RectBorderColor = RectBorderColor;
-            interestsZoneManager.RectFillColor = RectFillColor;
-            interestsZoneManager.RectBorderWidth = RectBorderWidth;
-            interestsZoneManager.RRCircleColor = RRCircleColor;
-            interestsZoneManager.RRTextColor = RRTextColor;
             interestsZoneManager.OnInit(HistoryPeriod, this);
-            
-            InterestZoneRenderingIndicator interestZoneRenderingIndicator = new InterestZoneRenderingIndicator();
-            interestZoneRenderingIndicator.manager = interestsZoneManager;
-            
+
             // Core.Instance.Indicators.BuiltIn.CreateIndicator()
             // AddIndicator(interestZoneRenderingIndicator);
         }
@@ -213,11 +196,12 @@ namespace InterestZonesBot
 
             Log("InterestZonesBot stopped", StrategyLoggingLevel.Trading);
         }
-        
+
         private void SymbolOnNewQuote(Symbol symbol, Quote quote)
         {
-            var bid = quote.Bid;
-            interestsZoneManager.HandleBid(bid, symbol, interestsZoneManager.bars.Count, interestsZoneManager.bars[interestsZoneManager.bars.Count - 1].OpenTime);
+            var bar = interestsZoneManager.bars[interestsZoneManager.bars.Count - 1];
+            interestsZoneManager.OnUpdate(UpdateReason.NewTick, interestsZoneManager.bars.Count, symbol, bar.OpenTime,
+                bar);
         }
 
         protected override void OnRemove()
@@ -229,7 +213,6 @@ namespace InterestZonesBot
 
         private void LoadHistoricalData()
         {
-
             int startIndex = Math.Max(0, historicalData.Count - LookbackBars);
 
             for (int i = startIndex; i < historicalData.Count; i++)
@@ -250,7 +233,7 @@ namespace InterestZonesBot
         {
             Bar bar = GetBar(historicalData.Count - 1);
             interestsZoneManager.bars.Add(bar);
-            interestsZoneManager.OnUpdate(UpdateReason.HistoricalBar,interestsZoneManager.bars.Count, symbol, 
+            interestsZoneManager.OnUpdate(UpdateReason.HistoricalBar, interestsZoneManager.bars.Count, symbol,
                 historicalData[historicalData.Count - 1].TimeLeft, GetBar(interestsZoneManager.bars.Count - 1));
         }
 
@@ -292,6 +275,5 @@ namespace InterestZonesBot
                 OpenTime = historicalData[index, SeekOriginHistory.Begin].TimeLeft,
             };
         }
-
     }
 }

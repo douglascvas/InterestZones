@@ -19,10 +19,11 @@ public class FakeOrder : IOrder
 
     // IOrderManager implementation
 
-    public void ProcessPrice(double price, int index)
+    public void ProcessPrice(Bar bar, int index)
     {
         if(Closed) return;
         var isSell = !IsBuy;
+        var price = IsBuy ? bar.Low : bar.High;
 
         Open = !Closed && (Open || (IsBuy && price <= EntryPrice) || (isSell && price >= EntryPrice));
         if(!Open) return;

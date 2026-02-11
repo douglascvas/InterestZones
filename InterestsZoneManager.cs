@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Linq;
 using TradingPlatform.BusinessLayer;
-using IOrder = InterestZones.Shared.IOrder;
 
 namespace InterestZones;
 
@@ -28,48 +26,19 @@ public partial class InterestsZoneManager
 
     // STYLES
 
-    public Color BOSLineColor = Color.Yellow;
-
-    public int BOSLineWidth = 1;
-
-    public LineStyleType BOSLineStyle = LineStyleType.Solid;
-
-    public Color FractalLineColor = Color.White;
-
-    public int FractalLineWidth = 1;
-
-    public LineStyleType FractalLineStyle = LineStyleType.Dash;
-
-    public Color RectBorderColor = Color.Cyan;
-
-    public Color RectFillColor = Color.FromArgb(50, 0, 255, 255);
-
-    public int RectBorderWidth = 1;
-
-    public Color RRCircleColor = Color.White;
-
-    public Color RRTextColor = Color.Black;
-
     #endregion
 
     #region Fields
 
     public List<BosEvent> bosEvents { get; set; } = new List<BosEvent>();
+    public Action<BosEvent> onBosEvent;
+    public Action<FractalArea> onAreaOpen;
     public List<Bar> bars { get; set; } = new List<Bar>();
     public List<FractalArea> closedAreas { get; set; } = new List<FractalArea>();
     public List<FractalArea> openAreas { get; set; } = new List<FractalArea>();
     public List<Fractal> unbrokenFractals { get; set; } = new List<Fractal>();
     public Dictionary<int, Fractal> unbrokenFractalsMap { get; set; } = new Dictionary<int, Fractal>();
     public FractalService fractalService { get; set; }
-
-    public Pen bosPen { get; set; }
-    public SolidBrush brush { get; set; }
-    public SolidBrush circleBrush { get; set; }
-    public Pen circlePen { get; set; }
-    public Pen fractalPen { get; set; }
-    public Pen rectPen { get; set; }
-    public SolidBrush textBrush { get; set; }
-    public Font font { get; set; }
 
     public FractalArea lastArea { get; set; }
     public double lastBid { get; set; }
@@ -91,14 +60,6 @@ public partial class InterestsZoneManager
     {
         Cleanup();
 
-        rectPen = new Pen(RectBorderColor, RectBorderWidth);
-        fractalPen = new Pen(FractalLineColor, FractalLineWidth);
-        bosPen = new Pen(BOSLineColor, BOSLineWidth);
-        brush = new SolidBrush(RectFillColor);
-        circleBrush = new SolidBrush(RRCircleColor);
-        circlePen = new Pen(RectBorderColor, 1);
-        textBrush = new SolidBrush(RRTextColor);
-        font = new Font("Arial", 10, FontStyle.Bold);
         tableFont = new Font("Arial", 9);
         tableBgBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 0));
         tableTextBrush = new SolidBrush(Color.White);
@@ -108,7 +69,8 @@ public partial class InterestsZoneManager
             bars, new FractalOptions()
             {
                 linkHighLow = true,
-                period = PivotPeriod
+                period = PivotPeriod,
+                requireConfirmation = false
             });
 
 
@@ -124,7 +86,6 @@ public partial class InterestsZoneManager
         unbrokenFractalsMap.Clear();
         bars.Clear();
 
-        lastFractal = null;
         lastArea = null;
         bestRR = 0;
         bestRRSum = 0;
@@ -134,12 +95,7 @@ public partial class InterestsZoneManager
 
     private void HandleFractal(FractalEvent e)
     {
-        lastFractal = e.fractal;
-        var last = unbrokenFractals.LastOrDefault();
-        if (last == null || last.getId() != e.fractal.getId())
-            unbrokenFractals.Add(e.fractal);
-        else if (last.getId() == e.fractal.getId())
-            unbrokenFractals[^1] = e.fractal;
+        unbrokenFractalsMap[e.fractal.getId()] = e.fractal;
     }
 
     public void OnUpdate(UpdateReason reason, int count, Symbol symbol, DateTime now, Bar bar)
@@ -151,6 +107,10 @@ public partial class InterestsZoneManager
             if (count > 2)
                 fractalService.processIndex(count - 2);
         }
+        else
+        {
+            bars[^1] = bar;
+        }
 
         if (double.IsNaN(lastBid))
             lastBid = symbol.Bid;
@@ -160,71 +120,72 @@ public partial class InterestsZoneManager
 
         var bid = symbol.Bid;
 
-        if (reason == UpdateReason.HistoricalBar)
-        {
-            var lastBar = bars[bars.Count - 2];
-            if (lastBar.bullish)
-            {
-                if (bar.bullish)
-                {
-                    HandleBid(bar.Low, symbol, count, now);
-                    lastBid = bar.Low;
-                    HandleBid(bar.High, symbol, count, now);
-                    lastBid = bar.High;
-                }
-                else
-                {
-                    HandleBid(bar.High, symbol, count, now);
-                    lastBid = bar.High;
-                    HandleBid(bar.Low, symbol, count, now);
-                    lastBid = bar.Low;
-                }
-            }
-            else
-            {
-                if (bar.bullish)
-                {
-                    HandleBid(bar.Low, symbol, count, now);
-                    lastBid = bar.Low;
-                    HandleBid(bar.High, symbol, count, now);
-                    lastBid = bar.High;
-                }
-                else
-                {
-                    HandleBid(bar.High, symbol, count, now);
-                    lastBid = bar.High;
-                    HandleBid(bar.Low, symbol, count, now);
-                    lastBid = bar.Low;
-                }
-            }
-        }
-        else if (reason == UpdateReason.NewTick)
-        {
-            HandleBid(bid, symbol, count, now);
-            lastBid = bid;
-        }
+        // if (reason == UpdateReason.HistoricalBar)
+        // {
+        //     var lastBar = bars[bars.Count - 2];
+        //     if (lastBar.bullish)
+        //     {
+        //         if (bar.bullish)
+        //         {
+        //             HandleBid(bar.Low, symbol, count, now);
+        //             lastBid = bar.Low;
+        //             HandleBid(bar.High, symbol, count, now);
+        //             lastBid = bar.High;
+        //         }
+        //         else
+        //         {
+        //             HandleBid(bar.High, symbol, count, now);
+        //             lastBid = bar.High;
+        //             HandleBid(bar.Low, symbol, count, now);
+        //             lastBid = bar.Low;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (bar.bullish)
+        //         {
+        //             HandleBid(bar.Low, symbol, count, now);
+        //             lastBid = bar.Low;
+        //             HandleBid(bar.High, symbol, count, now);
+        //             lastBid = bar.High;
+        //         }
+        //         else
+        //         {
+        //             HandleBid(bar.High, symbol, count, now);
+        //             lastBid = bar.High;
+        //             HandleBid(bar.Low, symbol, count, now);
+        //             lastBid = bar.Low;
+        //         }
+        //     }
+        // }
+        // else
+        // {
+        HandleBid(symbol);
+        lastBid = bid;
+        // }
     }
 
-    public void HandleBid(double bid, Symbol symbol, int count, DateTime now)
+    public void HandleBid(Symbol symbol)
     {
-        CheckForStructureBreak(bid, symbol, count, now);
-        HandleUnmitigatedAreas(bid, count, now);
+        CheckForStructureBreak(symbol);
+        HandleUnmitigatedAreas();
     }
 
-    private void HandleUnmitigatedAreas(double bid, int count, DateTime now)
+    private void HandleUnmitigatedAreas()
     {
         List<FractalArea> toBeRemoved = null;
+        var bar = bars[^1];
+        var count = bars.Count;
+        var now = bar.OpenTime;
         foreach (var area in openAreas)
         {
             if (!area.order.Open && !area.order.Closed)
             {
                 area.rectangleEnd = now;
                 area.rectangleEndIndex = count - 1;
-                var bidUp = bid > lastBid;
-                var bidDown = bid < lastBid;
             }
 
-            area.order.ProcessPrice(bid, count - 1);
+            area.order.ProcessPrice(bar, count - 1);
             if (area.order.Closed)
             {
                 if (toBeRemoved == null) toBeRemoved = new List<FractalArea>();
@@ -252,22 +213,23 @@ public partial class InterestsZoneManager
 
         if (closedAreas.Count > 0)
         {
-            int maxRRFound = closedAreas
-                .Select(z => z.order.TotalProfitInt)
-                .Where(z => z > 0)
-                .Max(z => z);
+            // int maxRRFound = closedAreas
+            //     .Select(z => z.order.TotalProfitInt)
+            //     .Where(z => z > 0)
+            //     .DefaultIfEmpty(0)
+            //     .Max(z => z);
 
-            for (int testMax = 1; testMax <= Math.Max(maxRRFound, 1); testMax++)
-            {
-                int testSum = 0;
-                testSum += SumRRsForMax(testMax);
-
-                if (testSum > bestSum)
-                {
-                    bestSum = testSum;
-                    bestMaxValue = testMax;
-                }
-            }
+            // for (int testMax = 1; testMax <= Math.Max(maxRRFound, 1); testMax++)
+            // {
+            //     int testSum = 0;
+            //     testSum += SumRRsForMax(testMax);
+            //
+            //     if (testSum > bestSum)
+            //     {
+            //         bestSum = testSum;
+            //         bestMaxValue = testMax;
+            //     }
+            // }
         }
 
         var currentSum = SumRRsForMax(MaxRRValue);
@@ -301,12 +263,12 @@ public partial class InterestsZoneManager
         return currentSum;
     }
 
-    private void CheckForStructureBreak(double bid, Symbol symbol, int count, DateTime now)
+    private void CheckForStructureBreak(Symbol symbol)
     {
         List<Fractal> toBeRemoved = null;
-        for (int f = 0; f < unbrokenFractals.Count - 1; f++)
+        var bar = bars[^1];
+        foreach (var fractalN in unbrokenFractalsMap.Values)
         {
-            Fractal fractalN = unbrokenFractals[f];
             // var lastFractal = fractalService.lastFractal;
             // if (lastFractal == null)
             // return;
@@ -314,10 +276,7 @@ public partial class InterestsZoneManager
             // var lastLowFractal = lastFractal.low ? lastFractal : lastFractal.getPrevious(true);
             // if (lastHighFractal == null || lastLowFractal == null) return;
 
-            var bidUp = bid > lastBid;
-            var bidDown = bid < lastBid;
-
-            if ((fractalN.high && bid > fractalN.value) || (fractalN.low && bid < fractalN.value))
+            if ((fractalN.high && bar.High > fractalN.value) || (fractalN.low && bar.Low < fractalN.value))
             {
                 if (toBeRemoved == null)
                     toBeRemoved = new List<Fractal>();
@@ -325,9 +284,9 @@ public partial class InterestsZoneManager
 
                 // broke structure
                 var fractal = fractalN.getNext(true);
-                if (fractal == null) return;
+                if (fractal == null) break;
                 // toBeRemoved.Add(fractal);
-                var averageBarSize = GetAverageBarSize(fractal, count) * BarSizeMultiplier;
+                var averageBarSize = GetAverageBarSize(fractal, bars.Count) * BarSizeMultiplier;
                 var fractalBar = bars[fractal.index];
                 var wickSize = fractal.high
                     ? fractalBar.upperWickTop - fractalBar.upperWickBottom
@@ -336,11 +295,9 @@ public partial class InterestsZoneManager
                     ? averageBarSize
                     : Math.Min(wickSize, averageBarSize);
                 if (RectangleHeightMode == RectHeightMode.Auto && rectangleHigh < 0.4 * averageBarSize)
-                {
                     rectangleHigh = averageBarSize;
-                }
 
-                if (!IsFractalValid(fractal, 0))
+                if (!IsFractalValid(fractal))
                     continue;
 
                 lastArea = new FractalArea
@@ -356,24 +313,29 @@ public partial class InterestsZoneManager
                         : fractal.value - rectangleHigh,
                     rectangleStart = fractal.dateTime,
                     rectangleStartIndex = fractal.index,
-                    rectangleEnd = now,
-                    rectangleEndIndex = count - 1
+                    rectangleEnd = bar.OpenTime,
+                    rectangleEndIndex = bars.Count - 1
                 };
                 openAreas.Add(lastArea);
+                onAreaOpen?.Invoke(lastArea);
 
-                bosEvents.Add(new BosEvent()
+                var bosEvent = new BosEvent()
                 {
                     fractal = fractalN,
-                    breakTime = now,
-                    breakIndex = count - 1,
-                    brokeUp = bidUp
-                });
+                    breakTime = bar.OpenTime,
+                    breakIndex = bars.Count - 1,
+                    brokeUp = fractal.low
+                };
+                bosEvents.Add(bosEvent);
+                onBosEvent?.Invoke(bosEvent);
             }
         }
 
         if (toBeRemoved != null)
+        {
             foreach (var fractal in toBeRemoved)
-                unbrokenFractals.Remove(fractal);
+                unbrokenFractalsMap.Remove(fractal.getId());
+        }
 
         // foreach (var fractal in unbrokenFractals)
         // {
@@ -387,13 +349,13 @@ public partial class InterestsZoneManager
         // }
     }
 
-    private bool IsFractalValid(Fractal fractalN, double height)
+    private bool IsFractalValid(Fractal fractalN)
     {
         for (int i = fractalN.index + 1; i < bars.Count - 1; i++)
         {
             var bar = bars[i];
-            if ((fractalN.high && bar.High > fractalN.value - height) ||
-                (fractalN.low && bar.Low < fractalN.value + height))
+            if ((fractalN.high && bar.High > fractalN.value) ||
+                (fractalN.low && bar.Low < fractalN.value))
                 return false;
         }
 
@@ -413,18 +375,5 @@ public partial class InterestsZoneManager
         }
 
         return barSizeSum / n;
-    }
-
-    private DashStyle GetDashStyle(LineStyleType style)
-    {
-        switch (style)
-        {
-            case LineStyleType.Dash:
-                return DashStyle.Dash;
-            case LineStyleType.Dot:
-                return DashStyle.Dot;
-            default:
-                return DashStyle.Solid;
-        }
     }
 }

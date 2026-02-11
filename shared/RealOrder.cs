@@ -84,7 +84,7 @@ namespace InterestZones.Shared
             }
         }
 
-        public void ProcessPrice(double price, int index)
+        public void ProcessPrice(Bar bar, int index)
         {
             if (Closed)
                 return;
@@ -114,6 +114,7 @@ namespace InterestZones.Shared
             if (!Open)
                 return;
 
+            var price = IsBuy ? bar.Low : bar.High;
             // Calculate current RR
             double risk = Math.Abs(EntryPrice - StopLoss);
             double currentRr = Math.Abs(price - EntryPrice) / risk;

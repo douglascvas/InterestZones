@@ -8,6 +8,7 @@
             this.index = index;
         }
 
+        public bool newFractalConfirmed { get; set; }
         public int index { get; set; }
         public Fractal fractal { get; set; }
     }

@@ -16,6 +16,6 @@ namespace InterestZones.Shared
         double BreakEvenOnProfit { get; }
         double MaxRR { get; }
 
-        void ProcessPrice(double price, int index);
+        void ProcessPrice(Bar bar, int index);
     }
 }

@@ -9,8 +9,11 @@ namespace InterestZones
         public FractalOptions options;
         public String id { get; set; }
         public Fractal lastFractal { get; set; }
+        private Fractal pending { get; set; }
+        private Fractal lastConfirmed { get; set; }
 
         public Action<FractalEvent> onFractal;
+        public Action<FractalEvent> onFractalInvalidate;
 
         public FractalService(string timeframe, List<Bar> marketSeries, FractalOptions options)
         {
@@ -70,6 +73,7 @@ namespace InterestZones
                 if (middleValue < bars[i].High)
                     return false;
             }
+
             return true;
         }
 
@@ -82,6 +86,7 @@ namespace InterestZones
                 if (middleValue > bars[i].Low)
                     return false;
             }
+
             return true;
         }
 
@@ -92,7 +97,8 @@ namespace InterestZones
 
             if (highFractal)
             {
-                Fractal fractal = new Fractal(middleIndex, bars[middleIndex].OpenTime, bars[middleIndex].High, true, id);
+                Fractal fractal = new Fractal(middleIndex, bars[middleIndex].OpenTime, bars[middleIndex].High, true,
+                    id);
                 processFractal(index, fractal);
             }
         }
@@ -104,7 +110,8 @@ namespace InterestZones
 
             if (lowFractal)
             {
-                Fractal fractal = new Fractal(middleIndex, bars[middleIndex].OpenTime, bars[middleIndex].Low, false, id);
+                Fractal fractal = new Fractal(middleIndex, bars[middleIndex].OpenTime, bars[middleIndex].Low, false,
+                    id);
                 processFractal(index, fractal);
             }
         }
@@ -121,9 +128,48 @@ namespace InterestZones
 
         private void processFractal(int index, Fractal fractal)
         {
+            if (lastFractal != null && fractal.high == lastFractal.high && !IsMoreExtreme(fractal, lastFractal))
+                return;
+
             addFractal(fractal);
-            FractalEvent fractalEvent = new FractalEvent(index, fractal);
-            triggerOnFractal(fractalEvent);
+
+            var last = fractal.getPrevious(false);
+            if (last != null && fractal.high == last.high)
+                onFractalInvalidate?.Invoke(new FractalEvent(index, last));
+
+            bool confirmed = false;
+            var triggerFractal = fractal;
+            if (lastConfirmed == null)
+            {
+                lastConfirmed = fractal;
+                pending = fractal;
+                triggerFractal = fractal;
+                confirmed = true;
+            }
+            else if (pending.high == lastConfirmed.high && fractal.high != pending.high)
+            {
+                pending = fractal;
+                triggerFractal = fractal;
+                confirmed = true;
+            }
+            else if (pending.high == fractal.high)
+            {
+                pending = fractal;
+            }
+            else if (fractal.high == lastConfirmed.high && fractal.high != pending.high)
+            {
+                triggerFractal = pending;
+                lastConfirmed = pending;
+                pending = fractal;
+                confirmed = true;
+            }
+
+            if (confirmed || !options.requireConfirmation)
+            {
+                FractalEvent fractalEvent = new FractalEvent(index, triggerFractal);
+                fractalEvent.newFractalConfirmed = confirmed;
+                triggerOnFractal(fractalEvent);
+        }
         }
 
         private void triggerOnFractal(FractalEvent fractalEvent)
@@ -131,5 +177,9 @@ namespace InterestZones
             onFractal?.Invoke(fractalEvent);
         }
 
+        private bool IsMoreExtreme(Fractal candidate, Fractal existing)
+        {
+            return candidate.high ? candidate.value > existing.value : candidate.value < existing.value;
     }
+}
 }
